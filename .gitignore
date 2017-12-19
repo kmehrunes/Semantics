@@ -1,5 +1,6 @@
 # Project files
 *.iml
+.idea/
 
 # Libs
 libs/
