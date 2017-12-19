@@ -1,0 +1,2 @@
+JMH S 29 performance.SerializationTest S 66 performance.generated.SerializationTest_serializeToMsgPack_jmhTest S 18 serializeToMsgPack S 11 AverageTime E A 1 1 1 E E E E E E E I 1 1 I 1 2 E E E E E E E E 
+JMH S 29 performance.SerializationTest S 54 performance.generated.SerializationTest_toJson_jmhTest S 6 toJson S 11 AverageTime E A 1 1 1 E E E E E E E I 1 1 I 1 2 E E E E E E E E 

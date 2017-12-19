@@ -1,0 +1,90 @@
+<project>
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+
+    <modelVersion> 4.0.0 </modelVersion>
+    <groupId> edu.qu.semantics </groupId>
+    <artifactId> semantics </artifactId>
+    <version> 0.0.1 </version>
+
+    <dependencies>
+
+        <!-- uncomment this if you want to get CoreNLP from Maven -->
+        <!--
+        <dependency>
+            <groupId>edu.stanford.nlp</groupId>
+            <artifactId>stanford-corenlp</artifactId>
+            <version>3.8.0</version>
+        </dependency>
+        -->
+
+        <!-- https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core -->
+        <dependency>
+            <!-- for performance testing -->
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>1.19</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-generator-annprocess -->
+        <dependency>
+            <!-- for performance testing -->
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>1.19</version>
+            <scope>provided</scope>
+        </dependency>
+
+
+
+        <!-- https://mvnrepository.com/artifact/org.deeplearning4j/deeplearning4j-core -->
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>deeplearning4j-core</artifactId>
+            <version>0.9.1</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.deeplearning4j/deeplearning4j-nlp -->
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>deeplearning4j-nlp</artifactId>
+            <version>0.9.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-native-platform</artifactId>
+            <version>0.9.1</version>
+        </dependency>
+
+        <!-- main library dependency -->
+        <dependency>
+            <groupId>net.sf.extjwnl</groupId>
+            <artifactId>extjwnl</artifactId>
+            <version>1.9.4</version>
+        </dependency>
+        <!-- Princeton WordNet 3.1 data dependency -->
+        <dependency>
+            <groupId>net.sf.extjwnl</groupId>
+            <artifactId>extjwnl-data-wn31</artifactId>
+            <version>1.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.msgpack</groupId>
+            <artifactId>msgpack-core</artifactId>
+            <version>0.8.14</version>
+        </dependency>
+
+        <dependency>
+            <!-- comes with Jackson already  -->
+            <groupId>org.msgpack</groupId>
+            <artifactId>jackson-dataformat-msgpack</artifactId>
+            <version>0.8.14</version>
+        </dependency>
+
+    </dependencies>
+</project>
