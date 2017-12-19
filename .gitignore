@@ -3,7 +3,7 @@
 .idea/
 
 # Libs
-libs/
+lib/
 
 # Compiled class file
 *.class
