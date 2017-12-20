@@ -2,7 +2,6 @@ package semantics;
 
 import edu.stanford.nlp.coref.data.CorefChain;
 import edu.stanford.nlp.coref.data.Dictionaries;
-import edu.stanford.nlp.coref.data.Semantics;
 import edu.stanford.nlp.simple.Sentence;
 import edu.stanford.nlp.simple.Document;
 
@@ -35,7 +34,7 @@ public class Main {
                 .numUniqueWords()
                 .avgWordLength()
                 .get();
-        FeatureExtractor extractor = new FeatureExtractor(operations);
+        DocumentProcessor extractor = new DocumentProcessor(operations);
         DocumentFeatures docFeatures = extractor.extractFeatures("Trump declares China, Russia as US rivals in security plan");
         System.out.println(docFeatures.toJson());
     }

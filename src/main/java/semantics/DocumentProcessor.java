@@ -9,7 +9,7 @@ import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
 import java.io.File;
 import java.util.*;
 
-public class FeatureExtractor {
+public class DocumentProcessor {
     private static String sentenceRegex = "\\s*\\.\\s*"; // use with str.trim().split(sentenceRegex)
     /**
      * The default unit breaker which splits a document
@@ -89,7 +89,7 @@ public class FeatureExtractor {
      * @param operations The pre-processing steps
      *                   and features to extract.
      */
-    public FeatureExtractor(Properties operations) {
+    public DocumentProcessor(Properties operations) {
         this(defaultBreaker, operations);
     }
 
@@ -102,7 +102,7 @@ public class FeatureExtractor {
      * @param operations The pre-processing steps
      *                   and features to extract.
      */
-    public FeatureExtractor(IDocumentBreaker breaker, Properties operations) {
+    public DocumentProcessor(IDocumentBreaker breaker, Properties operations) {
         unitTextBreaker = breaker;
         this.operations = operations;
 
@@ -130,39 +130,39 @@ public class FeatureExtractor {
         getGlove = this.operations.containsKey(FeatureTags.GLOVE);
     }
 
-    public FeatureExtractor setSentimentScorer(ISentimentScorer scorer) {
+    public DocumentProcessor setSentimentScorer(ISentimentScorer scorer) {
         sentimentScorer = scorer;
         return this;
     }
 
-    public FeatureExtractor useCorenlpSentimentScorer() {
+    public DocumentProcessor useCorenlpSentimentScorer() {
         return setSentimentScorer(corenlpSentimentScorer);
     }
 
-    public FeatureExtractor setTfIdfScorer(ITfIdfScorer termDocFrequency) {
+    public DocumentProcessor setTfIdfScorer(ITfIdfScorer termDocFrequency) {
         tfIdfScorer = termDocFrequency;
         return this;
     }
 
-    public FeatureExtractor useDefaultTfIdfScorer() {
+    public DocumentProcessor useDefaultTfIdfScorer() {
         return setTfIdfScorer(tfUnaryIdf);
     }
 
-    public FeatureExtractor setWord2vec(IWordVectorLoader loader, String path) throws Exception {
+    public DocumentProcessor setWord2vec(IWordVectorLoader loader, String path) throws Exception {
         word2vec = loader.loadModel(path);
         return this;
     }
 
-    public FeatureExtractor useDefaultWord2vec(String path) throws Exception {
+    public DocumentProcessor useDefaultWord2vec(String path) throws Exception {
         return setWord2vec(defaultWord2vecLoader, path);
     }
 
-    public FeatureExtractor setGloVe(IWordVectorLoader loader, String path) throws Exception {
+    public DocumentProcessor setGloVe(IWordVectorLoader loader, String path) throws Exception {
         gloVe = loader.loadModel(path);
         return this;
     }
 
-    public FeatureExtractor useDefaultGloVe(String path) throws Exception {
+    public DocumentProcessor useDefaultGloVe(String path) throws Exception {
         return setGloVe(defaultGloVeLoader, path);
     }
 

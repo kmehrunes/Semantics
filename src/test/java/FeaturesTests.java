@@ -1,11 +1,9 @@
-import edu.stanford.nlp.simple.Document;
 import org.junit.Assert;
 import org.junit.Test;
 import semantics.DocumentFeatures;
 import semantics.ExtractionProcess;
-import semantics.FeatureExtractor;
+import semantics.DocumentProcessor;
 
-import java.util.List;
 import java.util.Properties;
 
 public class FeaturesTests {
@@ -15,7 +13,7 @@ public class FeaturesTests {
         Properties operations = new ExtractionProcess()
                 .tfidf()
                 .get();
-        FeatureExtractor extractor = new FeatureExtractor(operations)
+        DocumentProcessor extractor = new DocumentProcessor(operations)
                 .useDefaultTfIdfScorer();
 
         String text = "Oil traded near $57 a barrel before U.S. data forecast to show crude stockpiles" +
