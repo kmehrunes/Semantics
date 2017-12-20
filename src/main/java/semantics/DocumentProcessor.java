@@ -111,8 +111,8 @@ public class DocumentProcessor {
         checkQuotes = this.operations.containsKey(FeatureTags.CONTAINS_QUOTES)
                 || this.operations.containsKey(FeatureTags.COUNTAINS_INCOMPLETE_QUOTES);
 
-        if (this.operations.contains(FeatureTags.NGRAMS)) {
-            ngrams = Integer.parseInt(FeatureTags.NGRAMS);
+        if (this.operations.containsKey(FeatureTags.NGRAMS)) {
+            ngrams = Integer.parseInt(this.operations.getProperty(FeatureTags.NGRAMS));
             getNgrams = true;
         }
 

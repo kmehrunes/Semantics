@@ -1,5 +1,7 @@
 package semantics;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.*;
 
 public class Main {
@@ -15,15 +17,15 @@ public class Main {
                 .removePunctuation()
                 .gloVe()
                 .relations()
+                .ngrams(2)
+                .entities()
                 .get();
         DocumentProcessor processor = new DocumentProcessor(operations)
                 .useDefaultGloVe(glove);
 
         DocumentFeatures features = processor.processDocument(text);
 
-        features.relations.forEach(tuple -> System.out.println(tuple.subject + " -> "
-                + tuple.predicate + " -> "
-                + tuple.object));
-        System.out.println(Arrays.toString(features.gloVe));
+        System.out.println(new ObjectMapper().writerWithDefaultPrettyPrinter()
+                .writeValueAsString(features.toJson()));
     }
 }
