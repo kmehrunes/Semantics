@@ -22,7 +22,7 @@ public class DocumentFeatures {
     public Boolean containsIncompleteQuotes;
     public List<TfIdfTerm> tfIdf;
     public double[] word2Vec;
-    public double[] glove;
+    public double[] gloVe;
 
     /**
      * Creates a JSON representation of the object.

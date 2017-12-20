@@ -5,76 +5,86 @@ import java.util.Properties;
 public class ExtractionProcess {
     private Properties operations;
 
-    public ExtractionProcess () {
+    public ExtractionProcess() {
         operations = new Properties();
     }
 
-    public Properties get () {
+    public Properties get() {
         return operations;
     }
 
-    public ExtractionProcess lemmatize () {
+    public ExtractionProcess lemmatize() {
         operations.setProperty(Preprocess.LEMMATIZE, "");
         return this;
     }
 
-    public ExtractionProcess removePunctuation () {
+    public ExtractionProcess removePunctuation() {
         operations.setProperty(Preprocess.DEPUNCTUATE, ""); // quotations are counted before they're removed
         return this;
     }
 
-    public ExtractionProcess ngrams (int n) {
+    public ExtractionProcess resolveCorefs() {
+        operations.setProperty(Preprocess.COREFS, "");
+        return this;
+    }
+
+    public ExtractionProcess ngrams(int n) {
         operations.setProperty(FeatureTags.NGRAMS, String.valueOf(n));
         return this;
     }
 
-    public ExtractionProcess partsOfSpeech () {
+    public ExtractionProcess partsOfSpeech() {
         operations.setProperty(FeatureTags.PARTS_OF_SPEECH, "");
         return this;
     }
 
-    public ExtractionProcess entities () {
+    public ExtractionProcess entities() {
         operations.setProperty(FeatureTags.ENTITIES, "");
         return this;
     }
 
-    public ExtractionProcess entitiesTypes () {
+    public ExtractionProcess entitiesTypes() {
         operations.setProperty(FeatureTags.ENTITIES_TYPES, "");
         return this;
     }
 
-    public ExtractionProcess relations () {
+    public ExtractionProcess relations() {
         operations.setProperty(FeatureTags.RELATIONS, "");
         return this;
     }
 
-    public ExtractionProcess numUniqueWords () {
+    public ExtractionProcess numUniqueWords() {
         operations.setProperty(FeatureTags.UNIQUE_WORDS_COUNT, "");
         return this;
     }
 
-    public ExtractionProcess avgWordLength () {
+    public ExtractionProcess avgWordLength() {
         operations.setProperty(FeatureTags.AVG_WORD_LENGTH, "");
         return this;
     }
 
-    public ExtractionProcess containsQuotes () {
+    public ExtractionProcess containsQuotes() {
         operations.setProperty(FeatureTags.CONTAINS_QUOTES, "");
         return this;
     }
 
-    public ExtractionProcess containsIncompleteQuotes () {
+    public ExtractionProcess containsIncompleteQuotes() {
         operations.setProperty(FeatureTags.COUNTAINS_INCOMPLETE_QUOTES, "");
         return this;
     }
 
-    public ExtractionProcess tfidf () {
+    public ExtractionProcess tfidf() {
         operations.setProperty(FeatureTags.TF_IDF, "");
         return this;
     }
 
     public ExtractionProcess word2vec() {
         operations.setProperty(FeatureTags.WORD2VEC, "");
+        return this;
+    }
+
+    public ExtractionProcess gloVe() {
+        operations.setProperty(FeatureTags.GLOVE, "");
         return this;
     }
 } 

@@ -1,5 +1,6 @@
 package semantics;
 
+import edu.stanford.nlp.coref.data.CorefChain;
 import edu.stanford.nlp.simple.Document;
 import edu.stanford.nlp.simple.Sentence;
 import edu.stanford.nlp.simple.Token;
@@ -17,7 +18,7 @@ public class DocumentProcessor {
      * [as many whitespaces].[as many whitespaces].
      * Could actually be pointless.
      */
-    public final static IDocumentBreaker defaultBreaker = text -> new Document(text).sentences();
+    public final static IDocumentBreaker defaultBreaker = Document::sentences;
 
     /**
      * The default loader for word2vec binary file.
@@ -75,6 +76,7 @@ public class DocumentProcessor {
     /* pre-processing and feature flags */
     private boolean lemmatize;
     private boolean depunctuate;
+    private boolean resolveCorefs;
     private boolean checkQuotes, getNgrams, getPos,
             getSentiment, getEntities, getRelations,
             getUniqueWordsCount, getWordLength, getWordsPerSentenc,
@@ -116,6 +118,7 @@ public class DocumentProcessor {
 
         lemmatize = this.operations.containsKey(Preprocess.LEMMATIZE);
         depunctuate = this.operations.containsKey(Preprocess.DEPUNCTUATE);
+        resolveCorefs = this.operations.containsKey(Preprocess.COREFS);
 
         getPos = this.operations.containsKey(FeatureTags.PARTS_OF_SPEECH);
         getSentiment = this.operations.containsKey(FeatureTags.SENTIMENT);
@@ -187,9 +190,13 @@ public class DocumentProcessor {
         return features;
     }
 
-    public DocumentFeatures extractFeatures(String text) {
-        List<Sentence> sentences = unitTextBreaker.breakDocument(text);
+    public DocumentFeatures processDocument(String text) {
+        Document document = new Document(text);
+        List<Sentence> sentences = unitTextBreaker.breakDocument(document);
         List<Token> allTokens = new ArrayList<>();
+        Map<Integer, CorefChain> docCorefs = resolveCorefs ?
+                document.coref() :
+                null;
 
         DocumentFeatures features = initializeFeatures();
 
@@ -198,6 +205,10 @@ public class DocumentProcessor {
         for (Sentence sentence : sentences) {
             if (lemmatize) {
                 sentence = Preprocess.lemmatize(sentence);
+            }
+
+            if (resolveCorefs && docCorefs != null) { // sometimes there are not co-refs to resolve
+                sentence = Preprocess.resolveSentence(sentence, docCorefs);
             }
 
             // this needs to be done before removing punctuations
@@ -266,7 +277,7 @@ public class DocumentProcessor {
         }
 
         if (getGlove) {
-            features.glove = DocumentVectors.getMeanVectorsFromTokens(allTokens, gloVe);
+            features.gloVe = DocumentVectors.getMeanVectorsFromTokens(allTokens, gloVe);
         }
 
         return features;

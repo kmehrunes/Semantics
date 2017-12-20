@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 public class Preprocess {
     public static String LEMMATIZE = "lemmatize";
     public static String DEPUNCTUATE = "depunctuate";
+    public static String COREFS = "corefs";
 
     /* ==== some helpers ==== */
     static Pattern punctuationPattern = Pattern.compile("\\p{Punct}");
@@ -51,7 +52,9 @@ public class Preprocess {
     }
 
     static String getRepresentative(CorefChain coref) {
-        return coref.getRepresentativeMention().mentionSpan;
+        return coref != null ?
+                coref.getRepresentativeMention().mentionSpan :
+                null;
     }
 
     public static Map<Integer, String> extractResolution(Sentence sentence, Map<Integer, CorefChain> docCorefs) {
@@ -67,9 +70,10 @@ public class Preprocess {
 
                 for (CorefChain.CorefMention mention : mentions) {
                     if (mention.sentNum - 1 == sentence.sentenceIndex()) {
-                        if (!isProperOrNominal(mention.mentionType))
-                        {
-                            resolutions.put(mention.startIndex - 1, getRepresentative(docCorefs.get(mention.corefClusterID)));
+                        if (!isProperOrNominal(mention.mentionType)) {
+                            String representative = getRepresentative(docCorefs.get(mention.corefClusterID));
+                            if (representative != null)
+                                resolutions.put(mention.startIndex - 1, representative);
                         }
                     }
                 }
@@ -107,7 +111,7 @@ public class Preprocess {
 
         if (token.equals("'ve"))
             return "have";
-        
+
         if (token.equals("'re"))
             return "are";
 

@@ -18,7 +18,7 @@ public class FeaturesTests {
 
         String text = "Oil traded near $57 a barrel before U.S. data forecast to show crude stockpiles" +
                 " in the world’s biggest consumer fell for a fifth week.";
-        DocumentFeatures features = extractor.extractFeatures(text);
+        DocumentFeatures features = extractor.processDocument(text);
 
         Assert.assertNotNull(features.tfIdf);
         Assert.assertTrue(features.tfIdf.size() > 0);
