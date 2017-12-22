@@ -36,7 +36,13 @@ public class SyntacticFeatures {
                     String object = joinCollection(triplet.object, CoreLabel::originalText);
                     return new SpoTuple(subject, predicate, object);
                 })
-                .sorted((a, b) -> a.predicate.length() > b.predicate.length()? 1 : -1)
+                .sorted((a, b) -> {
+                    if (a.predicate.length() > b.predicate.length())
+                        return 1;
+                    else if (a.predicate.length() < b.predicate.length())
+                        return -1;
+                    return 0;
+                })
                 .collect(Collectors.toList());
     }
 
