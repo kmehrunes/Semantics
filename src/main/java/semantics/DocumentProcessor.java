@@ -215,7 +215,7 @@ public class DocumentProcessor {
             if (checkQuotes) {
                 int count = SyntacticFeatures.countDoubleQuotes(sentence.tokens());
                 features.containsQuotes = count > 0;
-                features.containsIncompleteQuotes = count % 2 == 0;
+                features.containsIncompleteQuotes = count % 2 != 0;
             }
 
             List<Token> tokens = depunctuate ?

@@ -15,9 +15,13 @@ public class DocumentVectors {
     public static double[] getMeanVectors(List<String> words, WordVectors embeddings) {
         INDArray vector = embeddings.getWordVectors(words);
         double[] valuesVector = new double[vector.columns()];
+        int n = 0;
+
         for (int i = 0; i < vector.columns(); i++) {
-            valuesVector[i] = vector.getDouble(0, i);
+            valuesVector[i] = (vector.getDouble(0, i) + n * valuesVector[0]) / (n + 1);
+            n++;
         }
+
         return valuesVector;
     }
 } 

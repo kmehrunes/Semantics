@@ -2,10 +2,15 @@ package semantics;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeCreator;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class DocumentFeatures {
@@ -36,11 +41,6 @@ public class DocumentFeatures {
         return mapper.valueToTree(this);
     }
 
-    public ObjectNode toJsonMock() {
-        ObjectMapper mapper = new ObjectMapper();
-        return mapper.createObjectNode();
-    }
-
     /**
      * Creates a MsgPack representation of the object.
      * Note: its performance is not tested and still
@@ -63,7 +63,7 @@ public class DocumentFeatures {
      * @param object The JSON object to deserialize.
      * @return The corresponding instance of DocumentsFeatures.
      */
-    public static DocumentFeatures fromJson(ObjectNode object) {
+    public static DocumentFeatures fromJson(TreeNode object) {
         ObjectMapper mapper = new ObjectMapper();
         try {
             return mapper.treeToValue(object, DocumentFeatures.class);
@@ -87,5 +87,30 @@ public class DocumentFeatures {
             ex.printStackTrace();
             return null;
         }
+    }
+
+    /**
+     * Creates a JSON array out of an iterable collection
+     * of DocumentFeature instances.
+     * @param documents
+     * @return
+     */
+    public static ArrayNode createJsonArray(Iterable<DocumentFeatures> documents) {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+        return mapper.valueToTree(documents);
+    }
+
+
+    /**
+     * Creates a list of DocumentFeature instances out of a
+     * JSON array.
+     * @param jsonArray
+     * @return
+     */
+    public static List<DocumentFeatures> readJsonArray(ArrayNode jsonArray)  {
+        List<DocumentFeatures> features = new ArrayList<>();
+        jsonArray.forEach(node -> features.add(DocumentFeatures.fromJson(node)));
+        return features;
     }
 } 
