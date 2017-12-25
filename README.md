@@ -37,7 +37,7 @@ DocumentFeatures features = processor.processDocument(text);
 You can get a JSON representation of the returned features object by using **features.toJson()**.
 
 ## Provided Features
-1. **-grams**: A list of n-grams in the text. This isn't cross-sentence so, for example, in ".. term3. term4 .." term3_term4 isn't a regonized n-gram. It also exclusively returns n-grams of 'n', without including all n-grams of < n.
+1. **N-grams**: A list of n-grams in the text. This isn't cross-sentence so, for example, in ".. term3. term4 .." term3_term4 isn't a regonized n-gram. It also exclusively returns n-grams of 'n', without including all n-grams of < n.
 2. **Parts of speech**: A list of parts of speech tags which appeared in the text in order.
 3. **Sentiment**: The overall sentiment score of the text, you can provide your own sentiment scorer or use the default one which comes with CoreNLP. It currently gives a single value for the entire text but later it might return a score for each sentence.
 4. **Entities**: All named entities in the text and their types.
