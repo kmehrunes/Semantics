@@ -77,6 +77,7 @@ public class DocumentProcessor {
     private boolean lemmatize;
     private boolean depunctuate;
     private boolean resolveCorefs;
+    private boolean normalizeTweets;
     private boolean checkQuotes, getNgrams, getPos,
             getSentiment, getEntities, getRelations,
             getUniqueWordsCount, getWordLength, getWordsPerSentenc,
@@ -119,6 +120,7 @@ public class DocumentProcessor {
         lemmatize = this.operations.containsKey(Preprocess.LEMMATIZE);
         depunctuate = this.operations.containsKey(Preprocess.DEPUNCTUATE);
         resolveCorefs = this.operations.containsKey(Preprocess.COREFS);
+        normalizeTweets = this.operations.containsKey(Preprocess.NORMALIZE_TWEETS);
 
         getPos = this.operations.containsKey(FeatureTags.PARTS_OF_SPEECH);
         getSentiment = this.operations.containsKey(FeatureTags.SENTIMENT);
@@ -202,7 +204,14 @@ public class DocumentProcessor {
 
         features.numSentences = sentences.size();
 
+        // TODO: Pre-processing needs to be done lazily to improve performance
         for (Sentence sentence : sentences) {
+            if (normalizeTweets) {
+                sentence = Preprocess.normalizeTweet(sentence);
+                if (sentence == null)
+                    continue;
+            }
+
             if (lemmatize) {
                 sentence = Preprocess.lemmatize(sentence);
             }

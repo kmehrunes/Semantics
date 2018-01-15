@@ -13,6 +13,11 @@ public class ExtractionProcess {
         return operations;
     }
 
+    public ExtractionProcess normalizeTweets() {
+        operations.setProperty(Preprocess.NORMALIZE_TWEETS, "");
+        return this;
+    }
+
     public ExtractionProcess lemmatize() {
         operations.setProperty(Preprocess.LEMMATIZE, "");
         return this;

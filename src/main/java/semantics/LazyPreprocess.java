@@ -11,13 +11,9 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-public class Preprocess {
-    public static String LEMMATIZE = "lemmatize";
-    public static String DEPUNCTUATE = "depunctuate";
-    public static String COREFS = "corefs";
-    public static String NORMALIZE_TWEETS = "normalizeTweets";
-
+public class LazyPreprocess {
     /* ==== some helpers ==== */
     static Pattern punctuationPattern = Pattern.compile("\\p{Punct}");
 
@@ -34,38 +30,46 @@ public class Preprocess {
     }
     /* ===================== */
 
-    public static Sentence lemmatize(String text) {
-        return lemmatize(new Sentence(text));
-    }
-
-    public static Sentence lemmatize(Sentence sentence) {
-        return new Sentence(String.join(" ", sentence.lemmas()));
-    }
-
-    public static List<Token> removePunctuation(List<Token> tokens) {
-        return tokens.stream()
-                .filter(token -> !isPunctuation(token))
-                .collect(Collectors.toList());
-    }
-
-    public static Sentence normalizeTweet(Sentence sentence) {
-        List<String> tokens = sentence.tokens().stream()
-                .map(token -> {
-                    if (token.word().charAt(0) == '#')
-                        return token.word().substring(1);
-                    else if (token.word().charAt(0) == '@')
-                        return "";
-                    else if (token.word().startsWith("http"))
-                        return "";
-
-                    return token.word();
-                })
-                .filter(word -> !word.isEmpty())
-                .collect(Collectors.toList());
-        if (tokens.size() == 0) {
-            return null;
+    public static Optional<Sentence> preprocessSentence(Sentence sentence, boolean lemmatize, List<Function<String, String>> operations)
+    {
+        List<Token> tokens = sentence.tokens();
+        List<String> words = new ArrayList<>(tokens.size());
+        for (Token token : tokens) {
+            String word = lemmatize ? token.lemma() : token.word();
+            for (Function<String, String> operation : operations) {
+                word = operation.apply(word);
+            }
+            if (!word.isEmpty())
+                words.add(word);
         }
-        return new Sentence(tokens);
+        return words.size() > 0 ? Optional.of(new Sentence(words)) : Optional.empty();
+    }
+
+    public static String removePunctuation(String token) {
+        return isPunctuation(token) ? "" : token;
+    }
+
+    public static String normalizeHashtag(String token) {
+        return token.charAt(0) == '#' ? token.substring(1) : token;
+    }
+
+    public static String removeMention(String token) {
+        return token.charAt(0) == '@' ? "" : token;
+    }
+
+    public static String removeUrl(String token) {
+        return token.startsWith("http") ? "" : token;
+    }
+
+    public static String resolveCoref(Token token, Map<Integer, String> resolutions) {
+        String resolution = resolutions.get(token.index);
+        String tokenText = token.originalText();
+
+        return resolution == null ? tokenText : resolution;
+    }
+
+    public static String resolveBeHave(Token token) {
+        return resolveBeHave(token.word(), token.posTag(), token.next().posTag());
     }
 
     static boolean isProperOrNominal (Dictionaries.MentionType mentionType) {
