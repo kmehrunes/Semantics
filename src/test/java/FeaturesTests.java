@@ -91,7 +91,7 @@ public class FeaturesTests {
                     .map(IndexedWord::word)
                     .collect(Collectors.toList())));
 
-            System.out.println("Predicate: " + path.predicate.word());
+            System.out.println("Predicate: " + path.predicate.toString());
 
             if (path.object != null) {
                 System.out.println("Full object: " + String.join(" ", path.object.stream()

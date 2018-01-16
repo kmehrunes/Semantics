@@ -7,7 +7,7 @@ import java.util.List;
 
 public class InformationPath {
     public List<IndexedWord> subject;
-    public IndexedWord predicate;
+    public Predicate predicate;
     public List<IndexedWord> object;
     public List<InformationPath> objectPaths; // when the information has extended comp object
     public List<InformationPath> auxPaths; // when more information is contained in another path
@@ -20,16 +20,28 @@ public class InformationPath {
     }
 
     @Override
+    public InformationPath clone() {
+        InformationPath clone = new InformationPath();
+        clone.subject.addAll(subject);
+        clone.predicate = predicate;
+        clone.object.addAll(object);
+        clone.objectPaths.addAll(objectPaths);
+        clone.auxPaths.addAll(auxPaths);
+
+        return clone;
+    }
+
+    @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
 
-        builder.append("(");
+        builder.append("(SUBJECT: ");
         builder.append(InformationUtil.indexWordsToString(subject));
-        builder.append(", ");
-        builder.append(predicate.word());
-        builder.append(", ");
+        builder.append(", PREDICATE: ");
+        builder.append(predicate.toString());
+        builder.append(", OBJECT: ");
         builder.append(InformationUtil.indexWordsToString(object));
-        builder.append(", [");
+        builder.append(", OBJECT PATHS: [");
 
         for (int i = 0; i < objectPaths.size(); i++) {
             builder.append(objectPaths.get(i).toString());
@@ -37,7 +49,7 @@ public class InformationPath {
                 builder.append(", ");
         }
 
-        builder.append("], [");
+        builder.append("], AUX PATHS [");
 
         for (int i = 0; i < auxPaths.size(); i++) {
             builder.append(auxPaths.get(i).toString());

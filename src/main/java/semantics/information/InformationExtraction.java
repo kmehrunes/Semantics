@@ -10,13 +10,14 @@ import java.util.stream.Collectors;
 
 public class InformationExtraction {
 
+    final static List<String> COMPOUND_ONLY = Collections.singletonList("compound");
     final static List<String> COMPOUND_AND_MODS = Arrays.asList("compound", "nmod", "amod");
     final static List<String> COMPOUND_MODS_AND_CONJ = Arrays.asList("compound", "nmod", "cc", "conj");
     final static String SUBJECT_RELATION = "subj";
     final static List<String> OBJECT_RELATIONS = Arrays.asList("obj", "nmod");
     final static List<String> SUBJECT_OBJECT = Arrays.asList("subj", "obj");
-
     final static List<String> INTERPATH_RELATIONS = Arrays.asList("xcomp", "ccomp", "acl");
+    final static List<String> PREDICATE_AUX = Arrays.asList("nmod");
 
     public static void print(Sentence sentence) {
         SemanticGraph graph = sentence.dependencyGraph();
@@ -40,24 +41,37 @@ public class InformationExtraction {
         }
     }
 
-    public static List<IndexedWord> findUp(SemanticGraph graph, IndexedWord start, List<String> contains) {
+    private static List<SemanticGraphEdge> findOutgoingEdges(SemanticGraph graph, IndexedWord start, List<String> contains) {
+        List<SemanticGraphEdge> parents = graph.outgoingEdgeList(start);
+        return parents.stream()
+                .filter(edge -> InformationUtil.containsAny(edge.getRelation().getShortName(), contains))
+                .collect(Collectors.toList());
+    }
+
+    private static List<IndexedWord> findUp(SemanticGraph graph, IndexedWord start, List<String> contains) {
         List<SemanticGraphEdge> parents = graph.outgoingEdgeList(start);
         List<IndexedWord> rest = parents.stream()
                 .filter(edge -> InformationUtil.containsAny(edge.getRelation().getShortName(), contains))
                 .map(SemanticGraphEdge::getDependent)
                 .collect(Collectors.toList());
-        Collections.reverse(rest);
+        //Collections.reverse(rest);
         return rest;
     }
 
-    public static List<SemanticGraphEdge> findDirectObjects(SemanticGraph graph, IndexedWord predicate) {
+    private static List<IndexedWord> findCompounds(SemanticGraph graph, IndexedWord start) {
+        List<IndexedWord> relatedWords = findUp(graph, start, COMPOUND_AND_MODS);
+        relatedWords.add(start);
+        return relatedWords;
+    }
+
+    private static List<SemanticGraphEdge> findDirectObjects(SemanticGraph graph, IndexedWord predicate) {
         return graph.getChildList(predicate).stream()
                 .map(child -> graph.getEdge(predicate, child))
                 .filter(edge -> InformationUtil.containsAny(edge.getRelation().getShortName(), OBJECT_RELATIONS))
                 .collect(Collectors.toList());
     }
 
-    public static List<SemanticGraphEdge> findDirectSubjects(SemanticGraph graph, IndexedWord predicate) {
+    private static List<SemanticGraphEdge> findDirectSubjects(SemanticGraph graph, IndexedWord predicate) {
         return graph.getChildList(predicate).stream()
                 .map(child -> graph.getEdge(predicate, child))
                 .filter(edge -> edge.getRelation().getShortName().contains(SUBJECT_RELATION))
@@ -84,35 +98,56 @@ public class InformationExtraction {
         return edges;
     }
 
+    private static List<AuxiliaryInformation> findAuxiliaryInformation(SemanticGraph graph, IndexedWord predicate,
+                                                                       List<String> contains)
+    {
+        List<SemanticGraphEdge> relatedWords = findOutgoingEdges(graph, predicate, contains);
+        List<AuxiliaryInformation> information = new ArrayList<>();
+
+        relatedWords.forEach(edge -> {
+            IndexedWord word = edge.getDependent();
+            List<IndexedWord> compound = findCompounds(graph, word);
+            String type = edge.getRelation().getSpecific();
+            information.add(new AuxiliaryInformation(type, compound));
+        });
+
+        return information;
+    }
+
+    private static Predicate predicateFromWord(SemanticGraph graph, IndexedWord word) {
+        return new Predicate(word, findUp(graph, word, COMPOUND_ONLY),
+                findAuxiliaryInformation(graph, word, PREDICATE_AUX));
+    }
+
     private static List<InformationPath> findPathsFromSubjectEdge(SemanticGraphEdge edge, SemanticGraph graph) {
         List<InformationPath> paths = new ArrayList<>();
         IndexedWord directSubject = edge.getDependent();
-        IndexedWord predicate = edge.getGovernor();
+        IndexedWord directPredicate = edge.getGovernor();
 
-        List<IndexedWord> compoundSubject = findUp(graph, directSubject, COMPOUND_AND_MODS);
-        compoundSubject.add(edge.getDependent());
+        Predicate compoundPredicate = predicateFromWord(graph, directPredicate);
+
+        List<IndexedWord> compoundSubject = findCompounds(graph, directSubject);
 
         InformationPath information = new InformationPath();
         information.subject = compoundSubject;
-        information.predicate = predicate;
+        information.predicate = compoundPredicate;
 
-        List<SemanticGraphEdge> directObjectRelations = findDirectObjects(graph, predicate);
+        List<SemanticGraphEdge> directObjectRelations = findDirectObjects(graph, directPredicate);
 
         if (directObjectRelations.size() > 0) {
             paths.addAll(directObjectRelations.stream()
                     .map(directObjectRelation -> {
+                        InformationPath clonedInformation = information.clone();
+
                         // this is only the last word in the object words
                         IndexedWord directObject = directObjectRelation.getDependent();
 
                         // find the rest of the words of this object
-                        List<IndexedWord> compoundObject = findUp(graph, directObject, COMPOUND_AND_MODS);
+                        List<IndexedWord> compoundObject = findCompounds(graph, directObject);
 
-                        // add the direct object to the end of the object list
-                        compoundObject.add(directObjectRelation.getDependent());
+                        clonedInformation.object = compoundObject;
 
-                        information.object = compoundObject;
-
-                        return information;
+                        return clonedInformation;
                     })
                     .collect(Collectors.toList())
             );
@@ -127,31 +162,32 @@ public class InformationExtraction {
     private static List<InformationPath> findPathsFromObjectEdge(SemanticGraphEdge edge, SemanticGraph graph) {
         List<InformationPath> paths = new ArrayList<>();
         IndexedWord directObject = edge.getDependent();
-        IndexedWord predicate = edge.getGovernor();
+        IndexedWord directPredicate = edge.getGovernor();
 
-        List<IndexedWord> compoundObject = findUp(graph, directObject, COMPOUND_AND_MODS);
-        compoundObject.add(edge.getDependent());
+        Predicate compoundPredicate = predicateFromWord(graph, directPredicate);
+
+        List<IndexedWord> compoundObject = findCompounds(graph, directObject);
 
         InformationPath information = new InformationPath();
         information.object = compoundObject;
-        information.predicate = predicate;
+        information.predicate = compoundPredicate;
 
-        List<SemanticGraphEdge> directSubjectRelations = findDirectSubjects(graph, predicate);
+        List<SemanticGraphEdge> directSubjectRelations = findDirectSubjects(graph, directPredicate);
 
         if (directSubjectRelations.size() > 0) {
             paths.addAll(directSubjectRelations.stream()
                     .map(directSubjectRelation -> {
+                        InformationPath clonedInformation = information.clone();
+
                         // this is only the last word in the object words
                         IndexedWord directSubject = directSubjectRelation.getDependent();
 
                         // find the rest of the words of this object
-                        List<IndexedWord> compoundSubject = findUp(graph, directSubject, COMPOUND_AND_MODS);
+                        List<IndexedWord> compoundSubject = findCompounds(graph, directSubject);
 
-                        // add the direct object to the end of the object list
-                        compoundSubject.add(directSubjectRelation.getDependent());
-                        information.subject = compoundSubject;
+                        clonedInformation.subject = compoundSubject;
 
-                        return information;
+                        return clonedInformation;
                     })
                     .collect(Collectors.toList())
             );
@@ -164,8 +200,11 @@ public class InformationExtraction {
     }
 
     public static List<InformationPath> findSimpleInformationPaths(Sentence sentence) {
+        return findSimpleInformationPaths(sentence.dependencyGraph());
+    }
+
+    public static List<InformationPath> findSimpleInformationPaths(SemanticGraph graph) {
         List<InformationPath> paths = new ArrayList<>();
-        SemanticGraph graph = sentence.dependencyGraph();
         List<SemanticGraphEdge> predicateEdges = findPredicateEdges(graph);
 
         predicateEdges.forEach(edge -> {
@@ -180,7 +219,7 @@ public class InformationExtraction {
         return paths;
     }
 
-    static List<IndexedWord> compRelations(IndexedWord source, SemanticGraph graph) {
+    private static List<IndexedWord> compRelations(IndexedWord source, SemanticGraph graph) {
         List<IndexedWord> children = graph.getChildList(source);
         return children.stream()
                 .filter(child -> graph.getAllEdges(source, child).stream()
@@ -193,15 +232,15 @@ public class InformationExtraction {
     public static void linkPaths(List<InformationPath> paths, SemanticGraph graph) {
         Map<Integer, InformationPath> wordsPaths = new HashMap<>();
         for (InformationPath path : paths) {
-            wordsPaths.put(path.predicate.index(), path);
+            wordsPaths.put(path.predicate.getRepresentative().index(), path);
             if (path.object != null) {
                 path.object.forEach(objectWord -> wordsPaths.put(objectWord.index(), path));
             }
         }
 
         for (InformationPath path : paths) {
-            IndexedWord predicate = path.predicate;
-            List<IndexedWord> predicateLinks = compRelations(predicate, graph);
+            IndexedWord predicateRepresentative = path.predicate.getRepresentative();
+            List<IndexedWord> predicateLinks = compRelations(predicateRepresentative, graph);
 
             predicateLinks.forEach(link -> {
                 InformationPath linkedPath = wordsPaths.get(link.index());
