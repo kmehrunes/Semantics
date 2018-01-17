@@ -44,7 +44,7 @@ public class InformationPath {
         builder.append(", OBJECT PATHS: [");
 
         for (int i = 0; i < objectPaths.size(); i++) {
-            builder.append(objectPaths.get(i).toString());
+            builder.append(objectPaths.get(i));
             if (i != objectPaths.size() - 1)
                 builder.append(", ");
         }
@@ -52,7 +52,7 @@ public class InformationPath {
         builder.append("], AUX PATHS [");
 
         for (int i = 0; i < auxPaths.size(); i++) {
-            builder.append(auxPaths.get(i).toString());
+            builder.append(auxPaths.get(i));
             if (i != auxPaths.size() - 1)
                 builder.append(", ");
         }

@@ -7,6 +7,7 @@ import semantics.ExtractionProcess;
 import semantics.DocumentProcessor;
 import semantics.information.InformationPath;
 import semantics.information.InformationExtraction;
+import semantics.information.SemanticGraphUtil;
 
 import java.util.List;
 import java.util.Properties;
@@ -75,14 +76,14 @@ public class FeaturesTests {
         //semantics.information.InformationExtraction.extendedMentions(new Sentence(textCEO)).forEach(System.out::println);
         //semantics.information.InformationExtraction.actions(new Sentence(textCEO)).forEach(System.out::println);
 
-//        semantics.information.InformationExtraction.print(new Sentence(textCEO));
+//        semantics.information.InformationExtraction.printGraph(new Sentence(textCEO));
 //        System.out.println();
 //        semantics.information.InformationExtraction.findSubjectsEdges(new Sentence(textCEO)).forEach(System.out::println);
-//        semantics.information.InformationExtraction.print(new Sentence(textCEO));
+//        semantics.information.InformationExtraction.printGraph(new Sentence(textCEO));
 //        semantics.information.InformationExtraction.findSimpleInformationPaths(new Sentence(textCEO)).forEach(System.out::println);
 
         Sentence sentence = new Sentence(textTrump);
-        InformationExtraction.print(sentence);
+        SemanticGraphUtil.printGraph(sentence);
 
         List<InformationPath> paths = InformationExtraction.findSimpleInformationPaths(sentence);
 
