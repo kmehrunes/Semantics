@@ -33,8 +33,10 @@ public class SemanticGraphUtil {
     }
 
     public static void printGraph(Sentence sentence) {
-        SemanticGraph graph = sentence.dependencyGraph();
+        printGraph(sentence.dependencyGraph());
+    }
 
+    public static void printGraph(SemanticGraph graph) {
         for (IndexedWord word : graph.vertexSet()) {
             List<IndexedWord> list = graph.getChildList(word);
             if (list.size() == 0)

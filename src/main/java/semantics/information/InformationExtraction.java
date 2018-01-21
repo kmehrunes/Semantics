@@ -4,6 +4,7 @@ import edu.stanford.nlp.ling.IndexedWord;
 import edu.stanford.nlp.semgraph.SemanticGraph;
 import edu.stanford.nlp.semgraph.SemanticGraphEdge;
 import edu.stanford.nlp.simple.Sentence;
+import edu.stanford.nlp.simple.Token;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -102,7 +103,7 @@ public class InformationExtraction {
         relatedWords.forEach(edge -> {
             IndexedWord word = edge.getDependent();
             List<IndexedWord> compound = SemanticGraphUtil.findCompounds(graph, word);
-            String type = edge.getRelation().getSpecific();
+            String type = edge.getRelation().getSpecific() != null ? edge.getRelation().getSpecific() : edge.getRelation().getShortName();
             information.add(new AuxiliaryInformation(type, compound));
         });
 
@@ -220,6 +221,60 @@ public class InformationExtraction {
     }
 
     /**
+     * Works exactly like {@link #findPathsFromSubjectEdge(SemanticGraphEdge, SemanticGraph)}
+     * but the subject is the governor, and the predicate is the dependant.
+     * @param edge
+     * @param graph
+     * @return
+     */
+    private static List<InformationPath> findPathsFromApposEdge(SemanticGraphEdge edge, SemanticGraph graph) {
+        List<InformationPath> paths = new ArrayList<>();
+        IndexedWord directSubject = edge.getGovernor();
+        IndexedWord directPredicate = edge.getDependent();
+
+        Predicate compoundPredicate = predicateFromWord(graph, directPredicate);
+
+        List<IndexedWord> compoundSubject = SemanticGraphUtil.findCompounds(graph, directSubject);
+
+        InformationPath information = new InformationPath();
+        information.subject = compoundSubject;
+        information.predicate = compoundPredicate;
+
+        List<SemanticGraphEdge> directObjectRelations = findDirectObjects(graph, directPredicate);
+
+        if (directObjectRelations.size() > 0) {
+            paths.addAll(directObjectRelations.stream()
+                    .map(directObjectRelation -> {
+                        InformationPath clonedInformation = information.clone();
+
+                        // this is only the last word in the object words
+                        IndexedWord directObject = directObjectRelation.getDependent();
+
+                        // find the rest of the words of this object
+                        List<IndexedWord> compoundObject = SemanticGraphUtil.findCompounds(graph, directObject);
+
+                        clonedInformation.object = compoundObject;
+
+                        return clonedInformation;
+                    })
+                    .collect(Collectors.toList())
+            );
+        }
+        else {
+            paths.add(information);
+        }
+
+        return paths;
+    }
+
+    public static Sentence simplifySentence(Sentence sentence) {
+        return new Sentence(sentence.tokens().stream()
+                .filter(token -> !token.lemma().equals("be"))
+                .map(Token::word)
+                .collect(Collectors.toList()));
+    }
+
+    /**
      * Finds simple (non-linked) information paths from a sentence.
      * A simple information path must contain a predicate with:
      * a) only a subject
@@ -252,6 +307,23 @@ public class InformationExtraction {
             else if (edge.getRelation().getShortName().contains("obj")) {
                 paths.addAll(findPathsFromObjectEdge(edge, graph));
             }
+            else if (edge.getRelation().getShortName().contains("appos")) {
+                paths.addAll(findPathsFromApposEdge(edge, graph));
+            }
+            /*else if (edge.getRelation().getShortName().contains("acl")) {
+                paths.addAll(findPathsFromObjectEdge(edge, graph));
+            }*/
+            // TODO: Should this part be totally removed?
+            /*else if (edge.getRelation().getShortName().contains("xcomp")) {
+                if (edge.getGovernor().tag().contains("VB") &&
+                        !edge.getDependent().tag().contains("VB"))
+                {
+                    InformationPath compPath = new InformationPath();
+                    compPath.predicate = predicateFromWord(graph, edge.getGovernor());
+                    compPath.object = SemanticGraphUtil.findCompounds(graph, edge.getDependent());
+                    paths.add(compPath);
+                }
+            }*/
         });
 
         return paths;
@@ -261,7 +333,8 @@ public class InformationExtraction {
         List<IndexedWord> children = graph.getChildList(source);
         return children.stream()
                 .filter(child -> graph.getAllEdges(source, child).stream()
-                            .filter(edge -> InformationUtil.equalsAny(edge.getRelation().getShortName(), InformationPatterns.INTERPATH_RELATIONS))
+                            .filter(edge -> InformationUtil.equalsAny(edge.getRelation().getShortName(),
+                                    InformationPatterns.INTERPATH_RELATIONS))
                             .collect(Collectors.toList())
                             .size() > 0
                 ).collect(Collectors.toList());
@@ -277,11 +350,19 @@ public class InformationExtraction {
      * @param graph
      */
     public static void linkPaths(List<InformationPath> paths, SemanticGraph graph) {
-        Map<Integer, InformationPath> wordsPaths = new HashMap<>();
+        Map<Integer, List<InformationPath>> wordsPaths = new HashMap<>();
         for (InformationPath path : paths) {
-            wordsPaths.put(path.predicate.getRepresentative().index(), path);
+            wordsPaths.putIfAbsent(path.predicate.getRepresentative().index(), new ArrayList<>());
+            List<InformationPath> predPathsList = wordsPaths.get(path.predicate.getRepresentative().index());
+
+            predPathsList.add(path);
             if (path.object != null) {
-                path.object.forEach(objectWord -> wordsPaths.put(objectWord.index(), path));
+                path.object.forEach(objectWord -> {
+                    wordsPaths.putIfAbsent(objectWord.index(), new ArrayList<>());
+                    List<InformationPath> objPathsList = wordsPaths.get(objectWord.index());
+
+                    objPathsList.add(path);
+                });
             }
         }
 
@@ -290,8 +371,12 @@ public class InformationExtraction {
             List<IndexedWord> predicateLinks = compRelations(predicateRepresentative, graph);
 
             predicateLinks.forEach(link -> {
-                InformationPath linkedPath = wordsPaths.get(link.index());
-                path.objectPaths.add(linkedPath);
+                List<InformationPath> linkedPaths = wordsPaths.get(link.index());
+
+                if (linkedPaths != null)
+                    path.objectPaths.addAll(linkedPaths.stream()
+                            .filter(linkedPath -> linkedPath != path) // just being careful not to make a path reference itself
+                            .collect(Collectors.toList()));
             });
 
             if (path.object != null) {
@@ -299,8 +384,12 @@ public class InformationExtraction {
                 path.object.forEach(objectWord -> objectLinks.addAll(compRelations(objectWord, graph)));
 
                 objectLinks.forEach(link -> {
-                    InformationPath linkedPath = wordsPaths.get(link.index());
-                    path.auxPaths.add(linkedPath);
+                    List<InformationPath> linkedPaths = wordsPaths.get(link.index());
+
+                    if (linkedPaths != null)
+                        path.auxPaths.addAll(linkedPaths.stream()
+                                .filter(linkedPath -> linkedPath != path) // just being careful not to make a path reference itself
+                                .collect(Collectors.toList()));
                 });
             }
         }
