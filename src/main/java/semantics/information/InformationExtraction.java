@@ -128,6 +128,27 @@ public class InformationExtraction {
         return findAuxiliaryInformation(graph, word, InformationPatterns.CASE_RELATIONS);
     }
 
+    private static InformationPath expandPathWithObject(SemanticGraph graph, SemanticGraphEdge objectRelation,
+                                                 final InformationPath originalPath)
+    {
+        InformationPath clonedInformation = originalPath.clone();
+
+        // this is only the last word in the object words
+        IndexedWord directObject = objectRelation.getDependent();
+
+        // find the rest of the words of this object
+        clonedInformation.object = SemanticGraphUtil.findCompounds(graph, directObject);
+
+        /*
+         * find cases of the object which could be part of the predicate
+         * e.g. "Side effects induced by anabolic steroid use". 'by' is
+         * associated with 'use' but actually makes sense for 'induced'.
+         */
+        clonedInformation.predicate.getAuxiliaryBranches().addAll(casesFromWord(graph, directObject));
+
+        return clonedInformation;
+    }
+
     // TODO: make findPathFromSubject edge and findPathFromApposEdge use this one
     private static List<InformationPath> findSubjectPaths(SemanticGraph graph, IndexedWord directSubject,
                                                               IndexedWord directPredicate)
@@ -145,21 +166,7 @@ public class InformationExtraction {
 
         if (directObjectRelations.size() > 0) {
             paths.addAll(directObjectRelations.stream()
-                    .map(directObjectRelation -> {
-                        InformationPath clonedInformation = information.clone();
-
-                        // this is only the last word in the object words
-                        IndexedWord directObject = directObjectRelation.getDependent();
-
-                        // find the rest of the words of this object
-                        List<IndexedWord> compoundObject = SemanticGraphUtil.findCompounds(graph, directObject);
-
-                        clonedInformation.object = compoundObject;
-
-                        clonedInformation.predicate.getAuxiliaryBranches().addAll(casesFromWord(graph, directObject));
-
-                        return clonedInformation;
-                    })
+                    .map(directObjectRelation -> expandPathWithObject(graph, directObjectRelation, information))
                     .collect(Collectors.toList())
             );
         }
@@ -175,12 +182,24 @@ public class InformationExtraction {
                                     .count() > 0
                     ).findFirst();
 
+            /*
+             * if there's a noun in a branch but no object is available
+             * then it's probably the actual object.
+             * e.g. "Bill Gates is the founder of Microsoft". 'founder'
+             * is treated as the predicate, 'Microsoft' is attached to
+             * it as a branch. Since there's no object, then 'Microsoft'
+             * should be the suspected object, resulting in:
+             * Bill Gates --> founder --> Microsoft.
+             */
             if (candidate.isPresent()) {
                 AuxiliaryInformation branch = candidate.get();
                 InformationPath clonedInformation = information.clone();
                 clonedInformation.object = branch.getWords();
 
-                information.predicate.getAuxiliaryBranches().remove(branch);
+                clonedInformation.predicate.getAuxiliaryBranches().remove(branch);
+                clonedInformation.predicate.getAuxiliaryBranches().addAll(
+                        casesFromWord(graph, branch.getWords().get(branch.getWords().size() - 1))
+                );
 
                 paths.add(clonedInformation);
             }
@@ -192,92 +211,10 @@ public class InformationExtraction {
         return paths;
     }
 
-    /**
-     * TODO: This function is 1) too long, 2) very similar to findPathsfromApposEdge.
-     * Finds information paths from a subject relation edge. In other
-     * words, given a subject relation, it finds all possible objects
-     * and creates an information path for each.
-     * @param edge
-     * @param graph
-     * @return
-     */
-    private static List<InformationPath> findPathsFromSubjectEdge(SemanticGraphEdge edge, SemanticGraph graph) {
+    private static List<InformationPath> findObjectPaths(SemanticGraph graph, IndexedWord directObject,
+                                                         IndexedWord directPredicate)
+    {
         List<InformationPath> paths = new ArrayList<>();
-        IndexedWord directSubject = edge.getDependent();
-        IndexedWord directPredicate = edge.getGovernor();
-
-        Predicate compoundPredicate = predicateFromWord(graph, directPredicate);
-
-        List<IndexedWord> compoundSubject = SemanticGraphUtil.findCompounds(graph, directSubject);
-
-        InformationPath information = new InformationPath();
-        information.subject = compoundSubject;
-        information.predicate = compoundPredicate;
-
-        List<SemanticGraphEdge> directObjectRelations = findDirectObjects(graph, directPredicate);
-
-        if (directObjectRelations.size() > 0) {
-            paths.addAll(directObjectRelations.stream()
-                    .map(directObjectRelation -> {
-                        InformationPath clonedInformation = information.clone();
-
-                        // this is only the last word in the object words
-                        IndexedWord directObject = directObjectRelation.getDependent();
-
-                        // find the rest of the words of this object
-                        List<IndexedWord> compoundObject = SemanticGraphUtil.findCompounds(graph, directObject);
-
-                        clonedInformation.object = compoundObject;
-
-                        clonedInformation.predicate.getAuxiliaryBranches().addAll(casesFromWord(graph, directObject));
-
-                        return clonedInformation;
-                    })
-                    .collect(Collectors.toList())
-            );
-        }
-        else {
-            List<AuxiliaryInformation> branches = information.predicate.getAuxiliaryBranches();
-
-            // find a noun in the branches
-            Optional<AuxiliaryInformation> candidate = branches.stream()
-                    .filter(auxiliaryInformation ->
-                            // verify that the branch is a noun
-                            auxiliaryInformation.getWords().stream()
-                                .filter(word -> word.tag().startsWith("NN"))
-                                .count() > 0
-                    ).findFirst();
-
-            if (candidate.isPresent()) {
-                AuxiliaryInformation branch = candidate.get();
-                InformationPath clonedInformation = information.clone();
-                clonedInformation.object = branch.getWords();
-
-                information.predicate.getAuxiliaryBranches().remove(branch);
-
-                paths.add(clonedInformation);
-            }
-            else {
-                paths.add(information);
-            }
-        }
-
-        return paths;
-    }
-
-    /**
-     * Finds information paths from an object relation edge. In other
-     * words, given an object relation, it finds all possible subjects
-     * and creates an information path for each.
-     * @param edge
-     * @param graph
-     * @return
-     */
-    private static List<InformationPath> findPathsFromObjectEdge(SemanticGraphEdge edge, SemanticGraph graph) {
-        List<InformationPath> paths = new ArrayList<>();
-        IndexedWord directObject = edge.getDependent();
-        IndexedWord directPredicate = edge.getGovernor();
-
         Predicate compoundPredicate = predicateFromWord(graph, directPredicate);
 
         List<IndexedWord> compoundObject = SemanticGraphUtil.findCompounds(graph, directObject);
@@ -297,9 +234,7 @@ public class InformationExtraction {
                         IndexedWord directSubject = directSubjectRelation.getDependent();
 
                         // find the rest of the words of this object
-                        List<IndexedWord> compoundSubject = SemanticGraphUtil.findCompounds(graph, directSubject);
-
-                        clonedInformation.subject = compoundSubject;
+                        clonedInformation.subject = SemanticGraphUtil.findCompounds(graph, directSubject);
 
                         return clonedInformation;
                     })
@@ -314,6 +249,37 @@ public class InformationExtraction {
     }
 
     /**
+     * TODO: This function is 1) too long, 2) very similar to findPathsfromApposEdge.
+     * Finds information paths from a subject relation edge. In other
+     * words, given a subject relation, it finds all possible objects
+     * and creates an information path for each.
+     * @param edge
+     * @param graph
+     * @return
+     */
+    private static List<InformationPath> findPathsFromSubjectEdge(SemanticGraphEdge edge, SemanticGraph graph) {
+        IndexedWord directSubject = edge.getDependent();
+        IndexedWord directPredicate = edge.getGovernor();
+
+        return findSubjectPaths(graph, directSubject, directPredicate);
+    }
+
+    /**
+     * Finds information paths from an object relation edge. In other
+     * words, given an object relation, it finds all possible subjects
+     * and creates an information path for each.
+     * @param edge
+     * @param graph
+     * @return
+     */
+    private static List<InformationPath> findPathsFromObjectEdge(SemanticGraphEdge edge, SemanticGraph graph) {
+        IndexedWord directObject = edge.getDependent();
+        IndexedWord directPredicate = edge.getGovernor();
+
+        return findObjectPaths(graph, directObject, directPredicate);
+    }
+
+    /**
      * TODO: This function is 1) too long, 2) very similar to findPathsfromSubjectEdge.
      * Works exactly like {@link #findPathsFromSubjectEdge(SemanticGraphEdge, SemanticGraph)}
      * but the subject is the governor, and the predicate is the dependant.
@@ -321,73 +287,14 @@ public class InformationExtraction {
      * @param graph
      * @return
      */
-    private static List<InformationPath> findPathsFromApposEdge(SemanticGraphEdge edge, SemanticGraph graph) {
-        List<InformationPath> paths = new ArrayList<>();
+    private static List<InformationPath> findPathsFromApposAclEdges(SemanticGraphEdge edge, SemanticGraph graph) {
         IndexedWord directSubject = edge.getGovernor();
         IndexedWord directPredicate = edge.getDependent();
 
-        Predicate compoundPredicate = predicateFromWord(graph, directPredicate);
-
-        List<IndexedWord> compoundSubject = SemanticGraphUtil.findCompounds(graph, directSubject);
-
-        InformationPath information = new InformationPath();
-        information.subject = compoundSubject;
-        information.predicate = compoundPredicate;
-
-        List<SemanticGraphEdge> directObjectRelations = findDirectObjects(graph, directPredicate);
-
-        if (directObjectRelations.size() > 0) {
-            paths.addAll(directObjectRelations.stream()
-                    .map(directObjectRelation -> {
-                        InformationPath clonedInformation = information.clone();
-
-                        // this is only the last word in the object words
-                        IndexedWord directObject = directObjectRelation.getDependent();
-
-                        // find the rest of the words of this object
-                        List<IndexedWord> compoundObject = SemanticGraphUtil.findCompounds(graph, directObject);
-
-                        clonedInformation.object = compoundObject;
-
-                        clonedInformation.predicate.getAuxiliaryBranches().addAll(casesFromWord(graph, directObject));
-
-                        return clonedInformation;
-                    })
-                    .collect(Collectors.toList())
-            );
-        }
-        else {
-            List<AuxiliaryInformation> branches = information.predicate.getAuxiliaryBranches();
-
-            // find a noun in the branches
-            Optional<AuxiliaryInformation> candidate = branches.stream()
-                    .filter(auxiliaryInformation ->
-                            // verify that the branch is a noun
-                            auxiliaryInformation.getWords().stream()
-                                    .filter(word -> word.tag().startsWith("NN"))
-                                    .count() > 0
-                    ).findFirst();
-
-            if (candidate.isPresent()) {
-                AuxiliaryInformation branch = candidate.get();
-                InformationPath clonedInformation = information.clone();
-                clonedInformation.object = branch.getWords();
-
-                information.predicate.getAuxiliaryBranches().remove(branch);
-                information.predicate.getAuxiliaryBranches().addAll(
-                        casesFromWord(graph, branch.getWords().get(branch.getWords().size() - 1))
-                );
-
-                paths.add(clonedInformation);
-            }
-            else {
-                paths.add(information);
-            }
-        }
-
-        return paths;
+        return findSubjectPaths(graph, directSubject, directPredicate);
     }
 
+    @Deprecated
     public static Sentence simplifySentence(Sentence sentence) {
         return new Sentence(sentence.tokens().stream()
                 .filter(token -> !token.lemma().equals("be"))
@@ -429,10 +336,10 @@ public class InformationExtraction {
                 paths.addAll(findPathsFromObjectEdge(edge, graph));
             }
             else if (edge.getRelation().getShortName().contains("appos")) {
-                paths.addAll(findPathsFromApposEdge(edge, graph));
+                paths.addAll(findPathsFromApposAclEdges(edge, graph));
             }
             else if (edge.getRelation().getShortName().contains("acl")) {
-                paths.addAll(findPathsFromApposEdge(edge, graph));
+                paths.addAll(findPathsFromApposAclEdges(edge, graph));
             }/**/
             // TODO: Should this part be totally removed?
             /*else if (edge.getRelation().getShortName().contains("xcomp")) {
