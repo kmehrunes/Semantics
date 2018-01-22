@@ -125,6 +125,7 @@ public class InformationExtraction {
     }
 
     /**
+     * TODO: This function is 1) too long, 2) very similar to findPathsfromApposEdge.
      * Finds information paths from a subject relation edge. In other
      * words, given a subject relation, it finds all possible objects
      * and creates an information path for each.
@@ -166,7 +167,29 @@ public class InformationExtraction {
             );
         }
         else {
-            paths.add(information);
+            List<AuxiliaryInformation> branches = information.predicate.getAuxiliaryBranches();
+
+            // find a noun in the branches
+            Optional<AuxiliaryInformation> candidate = branches.stream()
+                    .filter(auxiliaryInformation ->
+                            // verify that the branch is a noun
+                            auxiliaryInformation.getWords().stream()
+                                .filter(word -> word.tag().startsWith("NN"))
+                                .count() > 0
+                    ).findFirst();
+
+            if (candidate.isPresent()) {
+                AuxiliaryInformation branch = candidate.get();
+                InformationPath clonedInformation = information.clone();
+                clonedInformation.object = branch.getWords();
+
+                information.predicate.getAuxiliaryBranches().remove(branch);
+
+                paths.add(clonedInformation);
+            }
+            else {
+                paths.add(information);
+            }
         }
 
         return paths;
@@ -221,6 +244,7 @@ public class InformationExtraction {
     }
 
     /**
+     * TODO: This function is 1) too long, 2) very similar to findPathsfromSubjectEdge.
      * Works exactly like {@link #findPathsFromSubjectEdge(SemanticGraphEdge, SemanticGraph)}
      * but the subject is the governor, and the predicate is the dependant.
      * @param edge
@@ -261,7 +285,29 @@ public class InformationExtraction {
             );
         }
         else {
-            paths.add(information);
+            List<AuxiliaryInformation> branches = information.predicate.getAuxiliaryBranches();
+
+            // find a noun in the branches
+            Optional<AuxiliaryInformation> candidate = branches.stream()
+                    .filter(auxiliaryInformation ->
+                            // verify that the branch is a noun
+                            auxiliaryInformation.getWords().stream()
+                                    .filter(word -> word.tag().startsWith("NN"))
+                                    .count() > 0
+                    ).findFirst();
+
+            if (candidate.isPresent()) {
+                AuxiliaryInformation branch = candidate.get();
+                InformationPath clonedInformation = information.clone();
+                clonedInformation.object = branch.getWords();
+
+                information.predicate.getAuxiliaryBranches().remove(branch);
+
+                paths.add(clonedInformation);
+            }
+            else {
+                paths.add(information);
+            }
         }
 
         return paths;
