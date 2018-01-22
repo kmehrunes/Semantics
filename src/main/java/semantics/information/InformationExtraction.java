@@ -124,6 +124,74 @@ public class InformationExtraction {
                 findAuxiliaryInformation(graph, word, InformationPatterns.PREDICATE_AUX));
     }
 
+    private static List<AuxiliaryInformation> casesFromWord(SemanticGraph graph, IndexedWord word) {
+        return findAuxiliaryInformation(graph, word, InformationPatterns.CASE_RELATIONS);
+    }
+
+    // TODO: make findPathFromSubject edge and findPathFromApposEdge use this one
+    private static List<InformationPath> findSubjectPaths(SemanticGraph graph, IndexedWord directSubject,
+                                                              IndexedWord directPredicate)
+    {
+        List<InformationPath> paths = new ArrayList<>();
+        Predicate compoundPredicate = predicateFromWord(graph, directPredicate);
+
+        List<IndexedWord> compoundSubject = SemanticGraphUtil.findCompounds(graph, directSubject);
+
+        InformationPath information = new InformationPath();
+        information.subject = compoundSubject;
+        information.predicate = compoundPredicate;
+
+        List<SemanticGraphEdge> directObjectRelations = findDirectObjects(graph, directPredicate);
+
+        if (directObjectRelations.size() > 0) {
+            paths.addAll(directObjectRelations.stream()
+                    .map(directObjectRelation -> {
+                        InformationPath clonedInformation = information.clone();
+
+                        // this is only the last word in the object words
+                        IndexedWord directObject = directObjectRelation.getDependent();
+
+                        // find the rest of the words of this object
+                        List<IndexedWord> compoundObject = SemanticGraphUtil.findCompounds(graph, directObject);
+
+                        clonedInformation.object = compoundObject;
+
+                        clonedInformation.predicate.getAuxiliaryBranches().addAll(casesFromWord(graph, directObject));
+
+                        return clonedInformation;
+                    })
+                    .collect(Collectors.toList())
+            );
+        }
+        else {
+            List<AuxiliaryInformation> branches = information.predicate.getAuxiliaryBranches();
+
+            // find a noun in the branches
+            Optional<AuxiliaryInformation> candidate = branches.stream()
+                    .filter(auxiliaryInformation ->
+                            // verify that the branch is a noun
+                            auxiliaryInformation.getWords().stream()
+                                    .filter(word -> word.tag().startsWith("NN"))
+                                    .count() > 0
+                    ).findFirst();
+
+            if (candidate.isPresent()) {
+                AuxiliaryInformation branch = candidate.get();
+                InformationPath clonedInformation = information.clone();
+                clonedInformation.object = branch.getWords();
+
+                information.predicate.getAuxiliaryBranches().remove(branch);
+
+                paths.add(clonedInformation);
+            }
+            else {
+                paths.add(information);
+            }
+        }
+
+        return paths;
+    }
+
     /**
      * TODO: This function is 1) too long, 2) very similar to findPathsfromApposEdge.
      * Finds information paths from a subject relation edge. In other
@@ -160,6 +228,8 @@ public class InformationExtraction {
                         List<IndexedWord> compoundObject = SemanticGraphUtil.findCompounds(graph, directObject);
 
                         clonedInformation.object = compoundObject;
+
+                        clonedInformation.predicate.getAuxiliaryBranches().addAll(casesFromWord(graph, directObject));
 
                         return clonedInformation;
                     })
@@ -279,6 +349,8 @@ public class InformationExtraction {
 
                         clonedInformation.object = compoundObject;
 
+                        clonedInformation.predicate.getAuxiliaryBranches().addAll(casesFromWord(graph, directObject));
+
                         return clonedInformation;
                     })
                     .collect(Collectors.toList())
@@ -302,6 +374,9 @@ public class InformationExtraction {
                 clonedInformation.object = branch.getWords();
 
                 information.predicate.getAuxiliaryBranches().remove(branch);
+                information.predicate.getAuxiliaryBranches().addAll(
+                        casesFromWord(graph, branch.getWords().get(branch.getWords().size() - 1))
+                );
 
                 paths.add(clonedInformation);
             }
@@ -356,9 +431,9 @@ public class InformationExtraction {
             else if (edge.getRelation().getShortName().contains("appos")) {
                 paths.addAll(findPathsFromApposEdge(edge, graph));
             }
-            /*else if (edge.getRelation().getShortName().contains("acl")) {
-                paths.addAll(findPathsFromObjectEdge(edge, graph));
-            }*/
+            else if (edge.getRelation().getShortName().contains("acl")) {
+                paths.addAll(findPathsFromApposEdge(edge, graph));
+            }/**/
             // TODO: Should this part be totally removed?
             /*else if (edge.getRelation().getShortName().contains("xcomp")) {
                 if (edge.getGovernor().tag().contains("VB") &&

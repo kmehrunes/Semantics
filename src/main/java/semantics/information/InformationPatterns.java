@@ -6,7 +6,7 @@ import java.util.List;
 
 class InformationPatterns {
     final static List<String> COMPOUND_ONLY = Collections.singletonList("compound");
-    final static List<String> COMPOUND_AND_MODS = Arrays.asList("compound", "nmod", "amod");
+    final static List<String> COMPOUND_AND_MODS = Arrays.asList("compound", "nmod", "amod", "nummod");
     final static List<String> COMPOUND_MODS_AND_CONJ = Arrays.asList("compound", "nmod", "cc", "conj");
     final static String SUBJECT_RELATION = "subj";
     // TODO: nmod isn't always an indication of an object, should be its own case
@@ -18,4 +18,5 @@ class InformationPatterns {
     final static List<String> PREDICATE_AUX = Arrays.asList("nmod", "aux", "adv");
     final static List<String> PREDICATE_PARTS = Arrays.asList("compound", "cop", "case");
     final static List<String> COP_RELATIONS = Collections.singletonList("cop");
+    final static List<String> CASE_RELATIONS = Collections.singletonList("case");
 }
