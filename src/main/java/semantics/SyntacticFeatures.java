@@ -32,7 +32,7 @@ public class SyntacticFeatures {
                 .filter(triplet -> triplet.confidence >= minConfidence)
                 .map(triplet -> {
                     String subject = joinCollection(triplet.subject, CoreLabel::originalText);
-                    String predicate = joinCollection(triplet.relation, CoreLabel::lemma);
+                    String predicate = joinCollection(triplet.relation, CoreLabel::originalText);
                     String object = joinCollection(triplet.object, CoreLabel::originalText);
                     return new SpoTuple(subject, predicate, object);
                 })
