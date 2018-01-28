@@ -9,6 +9,7 @@ public class InformationPath {
     public List<IndexedWord> subject;
     public Predicate predicate;
     public List<IndexedWord> object;
+    public List<IndexedWord> secondaryObject;
     public List<InformationPath> objectPaths; // when the information has extended comp object
     public List<InformationPath> auxPaths; // when more information is contained in another path
 
@@ -17,6 +18,7 @@ public class InformationPath {
         auxPaths = new ArrayList<>();
         object = new ArrayList<>();
         subject = new ArrayList<>();
+        secondaryObject = new ArrayList<>();
     }
 
     @Override
@@ -25,6 +27,7 @@ public class InformationPath {
         clone.subject.addAll(subject);
         clone.predicate = predicate;
         clone.object.addAll(object);
+        clone.secondaryObject.addAll(secondaryObject);
         clone.objectPaths.addAll(objectPaths);
         clone.auxPaths.addAll(auxPaths);
 

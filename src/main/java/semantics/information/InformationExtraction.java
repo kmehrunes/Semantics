@@ -36,7 +36,7 @@ public class InformationExtraction {
     private static List<SemanticGraphEdge> findDirectObjects(SemanticGraph graph, IndexedWord predicate) {
         return graph.getChildList(predicate).stream()
                 .map(child -> graph.getEdge(predicate, child))
-                .filter(edge -> InformationUtil.containsAny(edge.getRelation().getShortName(), InformationPatterns.OBJECT_RELATIONS))
+                .filter(edge -> InformationUtil.containsAny(edge.getRelation().getShortName(), InformationPatterns.DIRECT_OBJECT_RELATIONS))
                 .collect(Collectors.toList());
     }
 
@@ -103,6 +103,8 @@ public class InformationExtraction {
         relatedWords.forEach(edge -> {
             IndexedWord word = edge.getDependent();
             List<IndexedWord> compound = SemanticGraphUtil.findCompounds(graph, word);
+            compound.addAll(SemanticGraphUtil.findMods(graph, word, compound));
+
             String type = edge.getRelation().getSpecific() != null ? edge.getRelation().getSpecific() : edge.getRelation().getShortName();
             information.add(new AuxiliaryInformation(type, compound));
         });
@@ -138,6 +140,7 @@ public class InformationExtraction {
 
         // find the rest of the words of this object
         clonedInformation.object = SemanticGraphUtil.findCompounds(graph, directObject);
+        clonedInformation.object.addAll(SemanticGraphUtil.findMods(graph, directObject, clonedInformation.object));
 
         /*
          * find cases of the object which could be part of the predicate
@@ -149,7 +152,13 @@ public class InformationExtraction {
         return clonedInformation;
     }
 
-    // TODO: make findPathFromSubject edge and findPathFromApposEdge use this one
+    private static InformationPath expandBranchesWithObject(SemanticGraph graph, InformationPath originalPath) {
+        IndexedWord object = originalPath.object.get(originalPath.object.size()-1);
+        originalPath.predicate.getAuxiliaryBranches().addAll(findAuxiliaryInformation(graph, object,
+                InformationPatterns.NMOD_RELATION));
+        return originalPath;
+    }
+
     private static List<InformationPath> findSubjectPaths(SemanticGraph graph, IndexedWord directSubject,
                                                               IndexedWord directPredicate)
     {
@@ -157,16 +166,23 @@ public class InformationExtraction {
         Predicate compoundPredicate = predicateFromWord(graph, directPredicate);
 
         List<IndexedWord> compoundSubject = SemanticGraphUtil.findCompounds(graph, directSubject);
+        compoundSubject.addAll(SemanticGraphUtil.findMods(graph, directSubject, compoundSubject));
 
         InformationPath information = new InformationPath();
         information.subject = compoundSubject;
         information.predicate = compoundPredicate;
 
         List<SemanticGraphEdge> directObjectRelations = findDirectObjects(graph, directPredicate);
+        List<SemanticGraphEdge> indirectObjectEdges = SemanticGraphUtil.findOutgoingEdges(graph, directPredicate,
+                Collections.singletonList("iobj"));
+
+        information.secondaryObject.addAll(indirectObjectEdges.stream()
+                .map(SemanticGraphEdge::getDependent).collect(Collectors.toList()));
 
         if (directObjectRelations.size() > 0) {
             paths.addAll(directObjectRelations.stream()
                     .map(directObjectRelation -> expandPathWithObject(graph, directObjectRelation, information))
+                    .map(path -> expandBranchesWithObject(graph, path)) // is this needed?
                     .collect(Collectors.toList())
             );
         }
@@ -218,9 +234,11 @@ public class InformationExtraction {
         Predicate compoundPredicate = predicateFromWord(graph, directPredicate);
 
         List<IndexedWord> compoundObject = SemanticGraphUtil.findCompounds(graph, directObject);
+        compoundObject.addAll(SemanticGraphUtil.findMods(graph, directObject, compoundObject));
 
         InformationPath information = new InformationPath();
         information.object = compoundObject;
+
         information.predicate = compoundPredicate;
 
         List<SemanticGraphEdge> directSubjectRelations = findDirectSubjects(graph, directPredicate);
@@ -235,6 +253,7 @@ public class InformationExtraction {
 
                         // find the rest of the words of this object
                         clonedInformation.subject = SemanticGraphUtil.findCompounds(graph, directSubject);
+                        clonedInformation.subject.addAll(SemanticGraphUtil.findMods(graph, directSubject, clonedInformation.subject));
 
                         return clonedInformation;
                     })
@@ -332,7 +351,7 @@ public class InformationExtraction {
             if (edge.getRelation().getShortName().contains("subj")) {
                 paths.addAll(findPathsFromSubjectEdge(edge, graph));
             }
-            else if (edge.getRelation().getShortName().contains("obj")) {
+            else if (edge.getRelation().getShortName().contains("dobj")) {
                 paths.addAll(findPathsFromObjectEdge(edge, graph));
             }
             else if (edge.getRelation().getShortName().contains("appos")) {
@@ -361,7 +380,7 @@ public class InformationExtraction {
         List<IndexedWord> children = graph.getChildList(source);
         return children.stream()
                 .filter(child -> graph.getAllEdges(source, child).stream()
-                            .filter(edge -> InformationUtil.equalsAny(edge.getRelation().getShortName(),
+                            .filter(edge -> InformationUtil.containsAny(edge.getRelation().getShortName(),
                                     InformationPatterns.INTERPATH_RELATIONS))
                             .collect(Collectors.toList())
                             .size() > 0

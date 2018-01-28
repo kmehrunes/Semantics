@@ -38,6 +38,10 @@ public class InformationMain {
                 output.println("\tFull object: " + InformationUtil.indexWordsToString(path.object));
             }
 
+            if (path.secondaryObject != null && path.secondaryObject.size() > 0) {
+                output.println("\tSecondary object: " + InformationUtil.indexWordsToString(path.secondaryObject));
+            }
+
             output.println();
         });
 
@@ -63,8 +67,9 @@ public class InformationMain {
             processSentence(line, output);
 
             DocumentFeatures features = processor.processDocument(line);
+            System.out.println("OpenIE: ");
             features.relations.forEach(relation -> {
-                System.out.println(relation.subject + ", " + relation.predicate + ", " + relation.object);
+                System.out.println("\t" + relation.subject + ", " + relation.predicate + ", " + relation.object);
             });
 
             output.print("\nSentence: ");

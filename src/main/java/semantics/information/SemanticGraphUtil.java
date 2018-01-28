@@ -5,6 +5,9 @@ import edu.stanford.nlp.semgraph.SemanticGraph;
 import edu.stanford.nlp.semgraph.SemanticGraphEdge;
 import edu.stanford.nlp.simple.Sentence;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,9 +29,40 @@ public class SemanticGraphUtil {
         return rest;
     }
 
+    static List<IndexedWord> findUpWithCase(SemanticGraph graph, IndexedWord start, List<String> contains) {
+        List<SemanticGraphEdge> parents = graph.outgoingEdgeList(start);
+        List<IndexedWord> amplifiedEdges = parents.stream()
+                .filter(edge -> InformationUtil.containsAny(edge.getRelation().getShortName(), contains))
+                .map(edge -> {
+                    List<IndexedWord> cases = findUp(graph, edge.getDependent(), Arrays.asList("case", "det"));
+                    cases.add(edge.getDependent());
+                    return cases;
+                })
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+
+//        List<IndexedWord> rest = parents.stream()
+//                .filter(edge -> InformationUtil.containsAny(edge.getRelation().getShortName(), contains))
+//                .map(edge -> {
+//                    if (edge.getRelation().getSpecific() != null)
+//                        return edge.getRelation().getSpecific() + edge.getDependent();
+//                    return edge.getDependent();
+//                })
+//                .collect(Collectors.toList());
+        //Collections.reverse(rest);
+        return amplifiedEdges;
+    }
+
     static List<IndexedWord> findCompounds(SemanticGraph graph, IndexedWord start) {
-        List<IndexedWord> relatedWords = findUp(graph, start, InformationPatterns.COMPOUND_AND_MODS);
+        List<IndexedWord> relatedWords = findUp(graph, start, InformationPatterns.COMPOUND_AND_JMODS);
         relatedWords.add(start);
+        return relatedWords;
+    }
+
+    static List<IndexedWord> findMods(SemanticGraph graph, IndexedWord start, List<IndexedWord> wordsToFilter) {
+        List<IndexedWord> relatedWords = findUpWithCase(graph, start, InformationPatterns.MODS).stream()
+                .filter(word -> !wordsToFilter.contains(word))
+                .collect(Collectors.toList());
         return relatedWords;
     }
 
