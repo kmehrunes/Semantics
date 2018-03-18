@@ -1,8 +1,8 @@
 # Semantics
 
-A Java project which makes it easier to analyze text and extract features from it.
+**This is a toy project meant just to experiment with Stanford CoreNLP and DeepLearning4j, there might be a real one later**
 
-It mainly uses [Stanford's CoreNLP](https://stanfordnlp.github.io/CoreNLP/) and [DeepLearning4j](https://deeplearning4j.org). It also uses [Princton's WordNet](http://wordnet.princeton.edu) but that could be changed soon.
+A Java project which makes it easier to analyze text and extract features from it. It mainly uses [Stanford's CoreNLP](https://stanfordnlp.github.io/CoreNLP/) and [DeepLearning4j](https://deeplearning4j.org). It also uses [Princton's WordNet](http://wordnet.princeton.edu) but that could be changed soon.
 
 ## Example
 In order to create a documents processor you need to provide a properties object with the pre-processing steps and what you want to extract. This could be done as follows:
